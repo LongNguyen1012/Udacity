@@ -1,0 +1,5 @@
+Link to Los Angeles Open Street Map Data:
+https://mapzen.com/data/metro-extracts
+
+This is an XML file with size of roughly 86 MB (zip). The reason I chose this area because I live close by Los Angeles and I think since it's
+a metropolitan area, the data will be better constructed than data in rural areas.
