@@ -1,0 +1,806 @@
+PROPSER LOAN DATA EXPLORATION by LONG NGUYEN
+========================================================
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo=FALSE, message = FALSE, warnings = FALSE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(dplyr)
+library(randomForest)
+library(randomForestSRC)
+library(e1071)
+library(party)
+library(caret)
+library(ggRandomForests)
+library(GGally)
+library(scales)
+library(memisc)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loan <- read.csv('C:/Users/Long Nguyen/My-1st-Project/prosperLoanData.csv')
+```
+
+# Univariate Plots Section
+```{r echo=FALSE, Univariate_Plots}
+dim(loan)
+str(loan)
+```
+
+### Factors in the dataset
+```{r echo=FALSE}
+# find vector variables, print their names and number of levels
+
+findFactor = function(loan){
+  for (n in names(loan)){
+  if (is.factor(loan[[n]]) == TRUE){
+    print(paste(n,length(levels(loan[[n]])),'levels'))
+  }
+  }
+}
+
+findFactor(loan)
+```
+
+### Summary of some numeric variables
+
+Loan term
+```{r echo=FALSE}
+table(loan$Term)
+```
+
+Curent credit lines
+```{r echo=FALSE}
+summary(loan$CurrentCreditLines)
+```
+
+Open revolving monthly payment
+```{r echo=FALSE}
+summary(loan$OpenRevolvingMonthlyPayment)
+```
+
+Debt-to-income ratio
+```{r echo=FALSE}
+summary(loan$DebtToIncomeRatio)
+```
+
+Monthly loan payment
+```{r echo=FALSE}
+summary(loan$MonthlyLoanPayment)
+```
+
+Inquiries last 6 months
+```{r echo=FALSE}
+summary(loan$InquiriesLast6Months)
+```
+
+Income range
+```{r echo=FALSE}
+summary(loan$IncomeRange)
+```
+
+Prosper rating
+```{r echo=FALSE}
+summary(loan$ProsperRating..Alpha.)
+```
+
+It seems the dataset contains lots of missing data. After summarize a few numeric variables, I can see that some variables contain 7000 to 8000 NAs. These NAs will need to be cleaned in order to perform analysis and build predictive model.
+
+### Create Charged-off variable and Average credit score variable
+
+A summary of loan statuses is as follow.
+```{r echo=FALSE}
+summary(loan$LoanStatus)
+```
+
+After grouping all loans that are defaulted or cancelled to charged-off group and marked 1 and the other loans marked 0, the distribution of charged-off and non-charged-off loans is shown below. 
+```{r echo=FALSE}
+# Create new dummy variable (ChargedOff) to indicate which loans are charged-off and which are not
+
+loan$ChargedOff = 0
+loan$ChargedOff[loan$LoanStatus %in% c('Chargedoff','Cancelled','Defaulted')] = 1
+
+# Create Average Credit Score variable
+
+loan$AverageCreditScore = (loan$CreditScoreRangeLower + loan$CreditScoreRangeUpper)/2
+
+qplot(data=loan,x=loan$ChargedOff)
+
+prop.table(table(loan$ChargedOff))
+```
+
+My goal in this project is to build a predictive model to assess the default possibility of a loan given the information available at the time the loan is applied and credit report is pulled. In this particular analysis, default (or charged-off) is defined as the state of being charged-off, cancelled or default. First, I split the data into charged-off and non-charged-off groups using variable ChargedOff. There are 17,015 loans that are considered charged-off and 96,922 loans that are considered completed or in good standing. Charged-off loans account for 15% of the loans at Prosper while good-standing loans account for 85%.
+
+After examing the data, it seems like there are certain variables that are not going to contribute to prediction model such as Listing Key, Listing Number, Date, etc. Also, since I'm interested in creating a model to predict the risk of default of a loan at the moment the borrower completed application for a loan and the loan is granted, I'm just going to use variables that present information exists at this stage such as Credit Grade, Borrower APR, etc. Nevertheless, I'm going to create a variable called "Average Credit Score" to calculate the average credit score from variables Credit Score Upper and Credit Score Lower.
+
+The ending data sets for training the model is as follow
+
+```{r echo=FALSE}
+loan_var_name = c("CreditGrade", "Term", "BorrowerAPR", "ProsperRating..Alpha.", "ProsperScore", "ListingCategory..numeric.", "EmploymentStatus", "IsBorrowerHomeowner", "CurrentCreditLines", "OpenCreditLines", "TotalCreditLinespast7years", "OpenRevolvingAccounts", "OpenRevolvingMonthlyPayment","InquiriesLast6Months", "TotalInquiries", "CurrentDelinquencies", "AmountDelinquent", "DelinquenciesLast7Years", "PublicRecordsLast10Years","PublicRecordsLast12Months", "RevolvingCreditBalance","BankcardUtilization", "AvailableBankcardCredit","TotalTrades", "TradesNeverDelinquent..percentage.","TradesOpenedLast6Months", "DebtToIncomeRatio", "IncomeRange", "IncomeVerifiable", "TotalProsperLoans", "ProsperPrincipalBorrowed", "ScorexChangeAtTimeOfListing", "Recommendations", "InvestmentFromFriendsCount","InvestmentFromFriendsAmount","Investors","ChargedOff", "AverageCreditScore","CreditScoreRangeLower","CreditScoreRangeUpper","StatedMonthlyIncome", "ProsperPaymentsLessThanOneMonthLate", "ProsperPaymentsOneMonthPlusLate", "ProsperPrincipalOutstanding")
+
+loan = loan[,loan_var_name]
+
+rm(loan_var_name)
+```
+
+```{r echo=FALSE}
+
+# Clean up loan data to remove and impute NAs
+
+# Replace missing values in Propsper rating alpha with values from credit grade. 
+
+# Before 2009, credit grade is used as a rating metric for loans posted on Prosper. Grades include AA, A, B, C, D, E, HR, and NC. Grade "NC" is used for borrowers with no credit history. After 2009, because of lack of interest from investors in "NC" loans, the grades are adjusted to exclude "NC", with the ranges of credit score for grade "HR" and "E" changed to reflect the new grade scale. No changes are made to other grades. Therefore, it is appropriate to combine these credit grades with the grades from the new Prosper rating to create a cohesive rating variable, with the exclusion of grade "NC".
+
+loan = loan[as.character(loan$CreditGrade) != "NC",]
+
+n = which(as.character(loan$CreditGrade) != "")
+
+loan$ProsperRating..Alpha.[n] = loan$CreditGrade[n]
+
+loan = loan[is.na(loan$ProsperRating..Alpha.) == FALSE,]
+
+loan = loan[loan$ProsperRating..Alpha. != "",]
+
+loan$ProsperRating..Alpha. = droplevels(loan$ProsperRating..Alpha.)
+
+n = which(names(loan) == "CreditGrade")
+
+loan = loan[,-n]
+
+
+
+# Remove loans with NAs in Borrower APR feature, since there are just a few of these loans.
+
+loan = loan[is.na(loan$BorrowerAPR) == FALSE,]
+
+loan = loan[is.na(loan$TotalCreditLinespast7years) == FALSE,]
+
+loan = loan[is.na(loan$TotalInquiries) == FALSE,]
+
+loan = loan[is.na(loan$DelinquenciesLast7Years) == FALSE,]
+
+loan = loan[is.na(loan$CurrentCreditLines) == FALSE,]
+
+loan = loan[is.na(loan$OpenCreditLines) == FALSE,]
+
+
+
+# Combine loans with no employment status to "other" category
+
+loan$EmploymentStatus[as.character(loan$EmploymentStatus) == ""] = "Other"
+
+loan$EmploymentStatus = droplevels(loan$EmploymentStatus)
+
+
+
+# Mean impute several numeric variables
+
+meanImpute = function(namelist,loan) {
+  for (name in namelist) {
+    n = round(mean(as.numeric(loan[,name]), na.rm = T))
+    loan[,name][is.na(loan[,name]) == TRUE] = n
+  }
+  loan
+}
+
+namelist = c("AmountDelinquent", "PublicRecordsLast12Months", "RevolvingCreditBalance", "BankcardUtilization", "AvailableBankcardCredit", "TotalTrades", "TradesNeverDelinquent..percentage.", "TradesOpenedLast6Months", "TotalProsperLoans", "TotalProsperLoans", "ProsperPrincipalBorrowed", "ScorexChangeAtTimeOfListing")
+
+loan = meanImpute(namelist,loan)
+
+
+
+# Impute debt-to-income ratio using simple revolving monthly payment/monthly income
+
+n = which(is.na(loan$DebtToIncomeRatio) == TRUE)
+
+loan$DebtToIncomeRatio[n] = loan$OpenRevolvingMonthlyPayment[n]/loan$StatedMonthlyIncome[n]
+
+
+
+# Since it doesn't make sense to assess the default risk of borrowers that have no income at all, I will exclude information from these borrowers
+
+loan = loan[loan$StatedMonthlyIncome >= 1,]
+
+loan$IncomeRange = droplevels(loan$IncomeRange)
+
+
+
+# Audit income range variable
+
+auditIncomeRange = function(loan){
+
+  loan$IncomeRange = as.character(loan$IncomeRange)
+
+  condition = loan$IncomeRange == "Not displayed"
+  
+  yearlyIncome = round(as.numeric(loan$StatedMonthlyIncome[condition])*12)
+
+  n = which(yearlyIncome <= 24999)
+  loan$IncomeRange[condition][n] = "$1-24,999"
+  
+  n = which((yearlyIncome >= 25000) & (yearlyIncome <= 49999))
+  loan$IncomeRange[condition][n] = "$25,000-49,999"
+  
+  n = which((yearlyIncome >= 50000) & (yearlyIncome <= 74999))
+  loan$IncomeRange[condition][n] = "$50,000-74,999"
+  
+  n = which((yearlyIncome >= 75000) & (yearlyIncome <= 99999))
+  loan$IncomeRange[condition][n] = "$75,000-99,999"
+  
+  n = which(yearlyIncome >= 100000)
+  loan$IncomeRange[condition][n] = "$100,000+"
+
+  loan$IncomeRange = factor(loan$IncomeRange)
+}
+
+# In order to cut down the number of samples and to be able to utilize more features in my model, I will only consider loans that have prior history with Prosper.
+
+loan = loan[round(loan$TotalProsperLoans) > 0,]
+
+loan = loan[round(loan$ProsperPrincipalBorrowed) > 0,]
+
+
+# Any NAs in late payment or Prosper outstanding principal will be replaced with 0. This is because most borrowers on Prosper do not pay late and have no principal outstanding with Prosper.
+
+loan$ProsperPaymentsLessThanOneMonthLate[is.na(loan$ProsperPaymentsLessThanOneMonthLate) == TRUE] = 0
+
+loan$ProsperPaymentsOneMonthPlusLate[is.na(loan$ProsperPaymentsOneMonthPlusLate) == TRUE] = 0
+
+loan$ProsperPrincipalOutstanding[is.na(loan$ProsperPrincipalOutstanding) == TRUE] = 0
+
+
+
+# Conduct regression tree to fill in missing Prosper Score, attempt to replicate original Prosper Score assignment model. Source: https://www.prosper.com/help/topics/general-prosper_score/
+
+test = loan[is.na(loan$ProsperScore) == TRUE,]
+
+score_tree = rpart(data=loan,formula = ProsperScore ~ TotalInquiries + DelinquenciesLast7Years + BankcardUtilization + TradesOpenedLast6Months + DebtToIncomeRatio + ProsperPaymentsLessThanOneMonthLate + ProsperPaymentsOneMonthPlusLate + AvailableBankcardCredit + RevolvingCreditBalance, method = "anova")
+
+loan$ProsperScore[is.na(loan$ProsperScore) == TRUE] = round(predict(score_tree,test))
+
+n = which(names(loan) %in% c("CreditScoreRangeLower", "CreditScoreRangeUpper", "StatedMonthlyIncome"))
+
+loan = loan[,-n]
+
+loan$EmploymentStatus = droplevels(loan$EmploymentStatus)
+
+rm(n,score_tree)
+
+
+
+# Remove near zero-variance variables
+
+new = loan
+var = nearZeroVar(new)
+new = new[,-var]
+
+
+# Create train and test dataset from new dataset
+
+new$ChargedOff = loan$ChargedOff
+
+loan = new
+
+set.seed(2)
+
+index = sample((1:nrow(loan)),size = 0.8*nrow(loan))
+
+train = loan[index,]
+
+test = loan[-index,]
+
+str(loan)
+```
+
+Then I used randomForest to determine the variables that are significant to my model. The way random forest works is that it tries to grow n trees by randomly combine m number of variables as candidate for each node splt in each tree. Using cross validation techniques, it is able to train on different sets of train and test data, where the samples for each set are drawn randomly. Variable importance is determined at each tree using the decrease is prediction accuracy rate and the decrease in GINI impurity (a measure for node impurity) when that variable is removed from the model. The average of these measures accross all trees will determine the final variable importance.
+
+```{r echo=FALSE}
+n = which(names(train) == "ChargedOff")
+
+forest = randomForest(x=train[,-n],y = factor(train$ChargedOff),importance = T,ntree=100,mtry=12)
+
+dat = importance(forest,scale=FALSE)
+
+dat = head(dat[order(dat[,3], decreasing = TRUE),c(3,4)],10)
+
+dat
+```
+
+Even though random forest is infamous for its bias to factors with large amount of levels and continuos variables, I prefer using it than other variable importance assessment method because of its efficiency. RandomForest seems to perform fast with large amount of samples, large number of features and combined feature types datasets. I tried using cforest but it appears to be too computationally intensive to implement. I used mean gini decrease to determine variable importance because this metric for each variable is pretty stable as the number of trees increases. Also ntree = 100 and mtry = 12 are used after several experiments. It proves that the out-of-bag error rate diminishes insignificantly if ntree and mtry are larger than this threshold. I will explore some top important variables for now.
+
+### Borrower APR
+
+```{r echo=FALSE}
+summary(loan$BorrowerAPR)
+
+ggplot(loan) + geom_histogram(aes(x=BorrowerAPR, fill = as.factor(ChargedOff)),binwidth = 0.005)+ scale_x_continuous(breaks = seq(0,0.5,0.05)) + ggtitle("Borrower APR distribution")
+```
+
+As we can see, most borrowers (50%) are charged with APR between 0.156% and 0.283%, and between 0.35% and 0.375%. The distributions seems bimodal with an exceptional high number of borrowers charged with 0.35% APR. Also, we can see that for lower levels of APR, there are just a few or almost no loans that default. As APR rises higher, the amount of default loans also increases, with most default loans have APR around 0.35%.
+
+### Open revolving monthly payment
+
+```{r echo=FALSE}
+summary(loan$OpenRevolvingMonthlyPayment)
+
+ggplot(loan) + geom_histogram(aes(x = log10(OpenRevolvingMonthlyPayment+1), fill = as.factor(ChargedOff)),binwidth = 0.05) + ggtitle("Open revolving monthly payment distribution")
+```
+
+Since some of the data is hidden in the flat tail, a log transformation is used to better understand the distribution of borrowers' open revolving monthly payment. As the graph shows, most borrowers have about $200 of monthly loan payment on Prosper. I wonder does the amount of revolving credit would increase the risk of being charged off. The max monthly payment is pretty large ($14980). The log-transformed data is almost normally distributed, except the high frequency of borrowers with no monthly payment. Furthermore, it seems that most charged-off loans have either no or low monthly payment. The reason for this is that borrowers with low credit scores are limited in the amount of credit they can borrowed, as shown in the following graph.
+
+<img src="https://blog.creditkarma.com/wp-content/2015-01-26-Relationship-Btwn-Credit-Score-and-Credit-Limit-Update_GRAPH.png" />
+
+Ref: <https://www.creditkarma.com/article/relationship_score_and_credit_limits>
+
+### Revolving credit balance
+
+```{r echo=FALSE}
+summary(loan$RevolvingCreditBalance)
+
+ggplot(loan) + geom_histogram(aes(x = log10(RevolvingCreditBalance+1), fill = as.factor(ChargedOff))) + ggtitle("Revolving credit balance distribution")
+```
+
+A log 10 transformation is used to explore the distribution of borrowers' revolving credit balance. As the graph shows, most borrowers have about $3,162 to $19,540 worth of revolving credit balance. I wonder does the amount of revolving accounts would increase the risk of being charged off. The max number is pretty high ($1,436,000) and the data over all is very spread out, with 25, 50, and 75th percentile pretty far from each other. Also, there is a lot of people with no credit balance. Interestingly, borrowers with low credit balance or very high credit balance have lower default risk than borrowers with no credit balance or have medium amount of credit balance. I'm assuming that people with higher credit score are able to borrow more, and these are the people that do not usually default on their loans. Also, smaller credit balance is easy to manage, and not a lot of people default on small credit balance either. 
+
+One of the things that make me curious is why there are more people with zero revolving credit balance that default. One of my theory is that these people may be denied credit due to their low credit score. It turns out that most borrowers who default and have no revolving credit balance have average credit score of about 650.
+
+```{r}
+summary(loan$AverageCreditScore[(loan$RevolvingCreditBalance == 0) & (loan$ChargedOff == 1)])
+```
+
+
+### Available bank card credit
+
+```{r echo=FALSE}
+summary(loan$AvailableBankcardCredit)
+
+ggplot(loan) + geom_histogram(aes(x = log10(AvailableBankcardCredit+1), fill = as.factor(ChargedOff))) + ggtitle("Available bank card credit distribution")
+```
+
+The log-transformed of available bank card credit shows that 75% of borrowers have less than $13,180 worth of bank card credit, and a lot among them have no credit at all. Also, the data is very spread out in the first 50th percentile, while being more concentrated in the next 25th percentile. This suggests that credit over $10,000 may be hard to get, with varaince between credit relatively small. The range of this percentile is $11,200 to $13,180 worth of bank card credit available. We can see a similar pattern here: lower credit, higher risk.
+
+### Average credit score
+
+```{r echo=FALSE}
+summary(loan$AverageCreditScore)
+
+ggplot(loan) + geom_histogram(aes(x = AverageCreditScore, fill = as.factor(ChargedOff))) + ggtitle("Average credit score distribution")
+```
+
+The graph shows that 75% of borrowers have credit score below 730. Credit scores are pretty normally distributed with mean score of around 701. The max credit score is 889.5. It turns out that my thought is correst. Lower credit scores does result in higher charged-off risk.
+
+### Total inquiries
+
+```{r echo=FALSE}
+summary(loan$TotalInquiries)
+
+ggplot(loan) + geom_histogram(aes(x = log10(loan$TotalInquiries+1), fill = as.factor(ChargedOff))) + ggtitle("Total inquiries distribution")
+```
+
+Since some of the data is hidden in the flat tail, I used a log transformation to better understand the distribution of borrowers' total inquiries. As the graph shows, about 75% of borrowers have less than 7 inquiries in total. Also the max total iinquiries is also very large (379). It looks like the amount of inquiries does not tell us much about whether or not a laon will default, because at every value of total inquiries, the possibility of default looks very similar. 
+
+### Employment status
+
+```{r echo=FALSE}
+summary(loan$EmploymentStatus)
+
+ggplot(loan) + geom_histogram(aes(x = loan$EmploymentStatus, fill = as.factor(ChargedOff))) + ggtitle("Employment status distribution")
+```
+
+Employment status data is changed to combine "Not available" to "Other" and remove "". This assumes that "Not available" provides the similar absence of information as "Other". The graph shows that most people are employed. However, the category seems to overlapse each other and not consistent, because the amount of people work full-time, part-time, and self-employed do not add up to number of people employed. Also, it seems like the probability of default is higher in "full-time" category. Yet, we do not know what this "full-time" really means, thus not a lot of information can be gained from this distribution.
+
+### Bank card utilization
+
+```{r echo=FALSE}
+summary(loan$BankcardUtilization)
+
+ggplot(loan) + geom_histogram(aes(x=BankcardUtilization,fill = as.factor(ChargedOff))) + scale_x_sqrt() + ggtitle("Bank card utilization distribution")
+
+nrow(loan[loan$BankcardUtilization > 1,])
+```
+
+The graph shows that 75% of borrowers uses less than 84% of bank card credit. The average percentage of bank card used is 56%. On the extreme side, some borrowers used more than their credit card allowed (1715 borrowers). We can also see that the risk is high for people who don't use their credit cards (or they never used one), or used the cards heavily.
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+There are 113937 loan listing in the data set with 81 variables. I transformed the data into a new data with variables that are relevant to predicting whether a Prosper loan will be charged-off. There are a total of 5 factor variables in the new dataset. Among these variables, interesting ones that might provide some insight into predicting charged-off loans are:
+
+**income verifiable**: yes, no
+
+**is borrower homeowner**: yes, no
+
+**employment status**: Employed, Full-time, Not employed, Other, Part-time, Retired, Self-employed
+
+**income range**: $0, $1-24,999, $100,000+,$25,000-49,999, $50,000-74,999, $75,000-99,999, Not employed
+
+**Prosper rating alpha**: AA, A, B, C, D, E, HR
+
+**listing category numeric**: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 (description of each number is described in Prosper code book)
+
+Other observations:
+
+Average revolving monthly payment of each borrower is 398.3.
+
+75% of borrowers have debt-to-income ratio of less tthan 0.32.
+
+Most borrowers are employed full-time.
+
+The average number of current deliquencies for each borrower is 0.5921.
+
+The average credit score is 695.
+
+### What is/are the main feature(s) of interest in your dataset?
+
+The main features in the data set are APR, credit scores, and loan status (especially charged-off, cancelled, and default status). These data are provided by credit agencies and Prosper. I wonder is there enough information from these metrics to give a fairly accurate estimate of the default risk.
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+The other features in the data set are open revolving monthhly payment, open revolving accounts, employment status, income range, available bank card credit, and revolving credit balance. Since most of these financial information is already included in borrowers' APR, I would love to see how their employment status would affect their default risk. 
+
+### Did you create any new variables from existing variables in the dataset?
+
+Yes. In order to investigate the effect of credit score on default risk, I created the variable average credit score, which is the average of lower and upper bound of credit score for each loan. This metric helps simplify the range to a specific number and ease the comparision and other mathematical functions.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+There are a lot of unusual distributions. One of them is the distribution total inquiries. The data is extremely positively skewed so I transformed it by using log10 transformation. It turns out that most borrowers have less than 7 inquiries, and the borrower with largest number of inquries have 379 inquiries. It's interesting to see that no matter how many inquiries a borrwer might have, it doesn't affect their default risk. I also perform data-cleaning to clear all NA values. If the amount of NAs is small enough, samples containing these NAs will simply be deleted. If the amount of NAs is too large (as with Prosper Score), imputation method such as mean and regression tree is used to fil the missing data. Thus, the output of the model may need to be adjusted for these imputation. 
+
+# Bivariate Plots Section
+
+Multi-colinearity might be a problem in several prediction models, but it is not significant for random forest algorithm. The reason for this is that each tree in random forest will split on the variable that results in the smallest impurity, until a certain level of impurity is reached at each leaf node. Yet, this might pose some problem when interpreting the final result. If wo important variables are in the same tree, using one of them to split might cause reduction in predictive power of the other (because they tend to explain the same thing). For example, when you consider lower APR as charged-off loans and higher APR as non-charged-off loans, then lower APR loans will also have lower interest rate and vice versa. Thus, if we were to split the low APR group with interest rate variable, we can't really do that because all of them have low interest rate! Since random forest uses random bootstrap of variables, it might create several trees which contain the same correlated variables. Thus, when determining the importance of each variable, multi-colinearity may tell us an important variable as non-important. To overcome this, I will look for highly correlated variables using a plot matrix.
+
+```{r echo=FALSE, out.width=1500, out.height=1500}
+new = loan[, c("ChargedOff", "BorrowerAPR" ,"EmploymentStatus", "TotalInquiries", "OpenRevolvingMonthlyPayment","DebtToIncomeRatio" ,"AvailableBankcardCredit","BankcardUtilization","AverageCreditScore","RevolvingCreditBalance")]
+
+new$ChargedOff = as.factor(new$ChargedOff)
+
+new = new[sample((1:nrow(new)),10000),]
+
+ggpairs(new, params = c(shape = I('.'), outlier.shape = I('.'),  corSize=2), columnLabels = c("Charged Off", "APR", "E Status", "Inquiries", "Monthly Pmt", "Debt-income", "A. Bank card Cr", "Card Use", "Cr. Score", "Cr. Balance"), axisLabels = "internal")
+```
+
+The graph shows that APR, inquiries, and credit score distributions are different between charged-off and non-charged-off groups, which indicates that these variables might be important to include in our model. Also, there are quite a few pairs of variables that highly correlated with each other. I will check pairs of important variables, important and weak variables, and important and dependent variables.  
+
+### Average credit score vs Bank card utilization
+
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = AverageCreditScore, y = BankcardUtilization)) + geom_point(alpha = 1/20, position = position_jitter(h = 0)) + coord_trans(y = "sqrt") + geom_line(stat="summary", fun.y = mean, color = "red") + geom_line(stat="summary", fun.y = quantile,probs = 0.9, color = "green")
+```
+
+The red line shows that the mean of bank card utilization drops as average credit score increases. This may suggest that people with better credit are more careful with their credit utilization? Also, the scatter plot shows that most loans have score within 600-700 and borrowers in this range use almost all of their available revolving credit (green line shows the 90th percentile of data).
+
+```{r echo=FALSE}
+with(loan, cor.test(AverageCreditScore, BankcardUtilization))
+```
+
+As we can see with correlation test, the correlation is quite hight, around -0.405
+
+### Average credit score vs Revolving credit balance
+
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = AverageCreditScore, y = RevolvingCreditBalance)) + geom_point(alpha = 1/20, position = position_jitter(h = 0), color = "orange") + coord_trans(y = "sqrt") + geom_line(stat="summary", fun.y = mean)
+```
+
+The mean of revolving credit balance of borrowers increase as their credit score increases, and decreases after score passes 800. The relationship is definitely not linear. The black line shows the mean of revolving credit blance accorss various credit scores. Also, it seems that most borrowers have less than $500,000 in revolving credit balance. I don't think average credit score would have much affect on borrower's credit balance and vice versa. Let's do some correlation test.
+
+```{r echo=FALSE}
+with(loan, cor.test(AverageCreditScore, RevolvingCreditBalance))
+```
+
+The correlation is estimated to be 0.0898
+
+### Average credit score vs Available Bankcard credit
+
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = AverageCreditScore, y = AvailableBankcardCredit)) + geom_point(alpha = 1/20, position = position_jitter(h = 0), color = "blue")  + coord_trans(y = "sqrt") + geom_line(stat="summary", fun.y = mean)
+```
+
+The graph displays a strong relationship between Available Bankcard Credit and Average Credit Score. It proves that credit score is heavily used in financial industry to determine credit allowance, as we can see good credit score means bigger credit balance.
+
+```{r echo=FALSE}
+with(loan, cor.test(AverageCreditScore, RevolvingCreditBalance))
+```
+
+The corr test shows that correlation is estimated to be 0.0898
+
+### Average credit score vs Open revolving monhtly payment
+
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = AverageCreditScore, y = OpenRevolvingMonthlyPayment)) + geom_point(alpha = 1/20, position = position_jitter(h = 0), color = "red")
+```
+
+The graph shows non-linear relationship between open revolving monthly payment and average credit score. It looks similar to the graph between average credit score and revolving credit balance. This is understandable because if you have a large credit balance, your montly payment should be large as well.
+
+Let's see how our variables do overall in predicting the Charged-off risk.
+
+### Average credit score vs Charged off
+
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = factor(ChargedOff), y = AverageCreditScore)) + geom_boxplot(fill = "orange")
+```
+
+The graph shows that the median average credit score for charged-off loans is lower than that of non-charged-off. However, the range of scores for charged-off loans is much larger, and the scores spread out more than non-charged-off loans. Also, non-charged-off loans have more outliers.
+
+### Total inquiries vs Charged off
+
+```{r echo=FALSE}
+ggplot(data = loan, aes(x = factor(ChargedOff), y = TotalInquiries)) + coord_trans(y = "sqrt") + geom_boxplot(fill = "yellow")
+```
+
+It's shown that the median of total inquiries for non-charged-off loans is slightly smaller than that of charged-off loans. Also, the range of total inquries value for charged-off loans is higher, and the values seems to spread out more. This suggests that non-charged-off borrowers' total inquiries value is relatively small and most borrowers have values that fall within a small range, while charged-off borrowers have values that are relatively high and values fall within a larger range, suggesting that inquiries numbers are more diverse and unique. 
+
+### APR vs Charged off
+
+```{r echo=FALSE}
+ggplot(data = loan, aes(x = factor(ChargedOff), y = BorrowerAPR)) + geom_boxplot()
+```
+
+As we can see here, the distributions of APR among charged-off and non-charged-off borrwers are pretty similar. Values are evenly spread out among two groups and the ranges are similar too. However, the median APR for borrowers who did not default is lower than that of borrowers who defaulted. This suggests that APR might be a good indicator of default risk.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+Borrowers who defaulted have lower average credit score. Also, the range of credit score for charged-off borrwers is larger, which means that having score too large or too small might increase the default risk.
+
+For total inquires, the median number of inquiries for charged-off loans is slightly higher than that of non-charged-off. This means that borrowers whom creditors tend to have more questions about have a higher chance of default. Also, the range of values iis also larger for charged-off group, which means that values are too high might suggest a higher charged-off risk.
+
+For APR, the median APR for charged-off group is higher. Also, the inter-quantile range of charged-off group is higher, which means that generally, people who got charged off have higher APR than people who did not get charged-off  
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+Average credit score and bank card utilization seem to have high correlation. I wonder what is the cause for this. DOes it have something to do with borrowers' credit responsibility?
+
+### What was the strongest relationship you found?
+
+The strongest relationship I found was between available credit balance and monthly revolving monthly payment. The correlation is estimated to be 0.778.
+
+
+# Multivariate Plots Section
+
+Since my ultimate goal is to create a trained model that can effectively classify whether or not a loan will default, I'm interested in looking at each pairs of variable to see if default and non-default loans are linearly separable on two-dimension feature space. Since Random Forest has given me a list of what it thinks are important variables, I will start from there. I will try to combine pairs of important variables.
+
+### Charged-off in APR vs Prosper principal outstanding
+
+```{r echo=FALSE, Multivariate_Plots}
+ggplot(data=train,aes(x=BorrowerAPR,y=ProsperPrincipalOutstanding, color = as.factor(ChargedOff))) + geom_point()
+```
+
+As the graph shows, it's very hard to draw a linear or non-linear separation between the charged-off and non-charged-off loans. Most loans, either charged-off or non-charged-off, have APR of around 0.05 to 0.5 and less than $15,000 worth of Prosper loan outstanding.
+
+### Charged-off in APR vs Employment status
+
+```{r echo=FALSE}
+ggplot(data=train,aes(y=BorrowerAPR,x=EmploymentStatus, color = as.factor(ChargedOff))) + geom_boxplot()
+
+ggplot() + geom_bar(data=loan, aes(x = EmploymentStatus, fill = factor(ChargedOff)), position = 'fill')
+```
+
+It can easily be seen that most of the charged off loans have "full-time", "not employed", "part-time", or "retired" employment status. Also, the data can be split on the y axis. As we see, the majority of charged-off loans have low APR, regardless of their empployment status. Since we can easily utilize both features to classify data, this pair of variables is important.
+
+### Charged-off in APR vs Available bank card credit
+
+```{r echo=FALSE}
+ggplot(data=train,aes(x=BorrowerAPR,y=AvailableBankcardCredit, color = as.factor(ChargedOff))) + geom_point()
+```
+
+As we can see, it's hard to separate between dafaulted loans and non-defaulted loans, which suggest that Available Bank Card Credit and APR together does not do a good job of discriminating between defaulted and non-defaulted loans.
+
+Now I will try to pair two relatively weak variable
+
+### Charged-off in Public record (last 10 years) vs Prosper principal outstanding
+
+```{r echo=FALSE}
+ggplot(data=train,aes(x=PublicRecordsLast10Years,y=ProsperPrincipalOutstanding, color = as.factor(ChargedOff))) + geom_point(position = position_jitter(h = 0))
+```
+
+Again, we can't separate between charged-off and non-charged-off loans in this two-dimensional feature space.
+
+I will try to pair important variables that are highly related to each other.
+
+### Charged-off in Average credit score vs Total inquiries
+
+```{r echo=FALSE}
+ggplot(data=train,aes(x=AverageCreditScore, y =TotalInquiries, color = as.factor(ChargedOff))) + geom_point(position = position_jitter(h = 0))
+```
+
+Now we can see that default and non-default loans are pretty easier to separate from this feature space. Loans that have low credit score and low inquiries have a higher chance of dafault than loans that have lower inquiries and higher credit score.
+
+Now it seems that variables that have high predictive power and highly correlated to each other are what we are looking for. This is because variables with high predictive power will make it easier to separate two classes. Also, if two variables are highly related to each other, it wouldn't matter which one get split first, which means the data points will be well separated. Let's test this.
+
+### Charged-off in Average credit score vs Employment status
+
+```{r echo=FALSE}
+ggplot(data=train,aes(y=AverageCreditScore, x =EmploymentStatus, color = as.factor(ChargedOff))) + geom_boxplot()
+```
+
+As it shows in the graph, if we were to split the data by Average Credit Score, we can do that easily, since the majority of charged-off loans have lower credit scores, regardless of employment status, while the credit scores of non-charged-off loans stay pretty much in the same range. 
+
+```{r echo=FALSE}
+ggplot() + geom_bar(data=loan, aes(x = EmploymentStatus, fill = factor(ChargedOff)), position = 'fill')
+```
+
+Also, if we were to split the data by Employment Status, we can see that people with "full-time","not-employed", or "retired" have higher chance of getting default than people with other employment status. Combine these two insights, we can do a pretty good job of classifying which loans are likely to default
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+There are many interesting relationships that I found. It seems that most important variables can be paird together in our model. Even though there is some multicolinearity issue, yet this doesn't reduce the predictive power of any of important variables (their ranks are still high and we can separate the data points on their feature space). Therefore, I think these pairs of features would benefit my model. Yet weaker variables' predictive power may be strengthen by using additional features. Therefore, a systematic approach to feature selection is needed. 
+
+### Were there any interesting or surprising interactions between features
+
+Borrower APR is considered one of important features by random Forest. When I plot APR by itself, the distributions for charged-off and non-charged-off loans look very different, suggesting it is an important variable. Yet when combine with other important variables, it doesn't help much in classifying the data points. For example, when I plot Average Credit Score and APR, I can easily find a cut off point in average score and divide the data by two, yet it's almost impossible to divide these sub-datas by APR feature. 
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+Yes I did. At first I attempted to use random forest as a classifier. However, random forest appears to predict non-charged-off cases very well but poorly predict charged-off cases. Then I tried using naive Bayes, since the algorithm has reputation for being effecitive despite violation of its feature independence assumption. Naive Bayes predicts the default loans very well but is not as good as random forest in predicitng non-default. Support vector machine is very computationally intensive, yet did poorly in prediciting default loans. Therefore, I decided to create a voting scheme for final prediction to see if the combined result is better than individual ones.
+
+```{r echo=FALSE}
+
+# Create naive Bayes classifier
+
+n = which(names(train) == "ChargedOff")
+
+bayes = naiveBayes(x=train[,-n], y = factor(train$ChargedOff))
+
+bayes_predict = predict(bayes,test)
+
+
+
+# Create SVM classifier
+
+set.seed(4)
+
+index = sample((1:nrow(train)),size = 20000)
+
+new_train = train[index,]
+
+support = svm(as.factor(ChargedOff)~.,data=new_train)
+
+
+
+# Voting scheme
+
+pred_vote = rep(0,nrow(test))
+
+svm_predict = predict(support,test)
+
+forest_predict = predict(forest,test)
+
+
+
+# Calculate class prediction accuracy rate for each classifier
+
+forest_0_acc = prop.table(table(forest_predict,test$ChargedOff),1)[1,1]
+
+forest_1_acc = prop.table(table(forest_predict,test$ChargedOff),1)[2,2]
+
+bayes_0_acc = prop.table(table(bayes_predict,test$ChargedOff),1)[1,1]
+
+bayes_1_acc = prop.table(table(bayes_predict,test$ChargedOff),1)[2,2]
+
+svm_0_acc = prop.table(table(svm_predict,test$ChargedOff),1)[1,1]
+
+svm_1_acc = prop.table(table(svm_predict,test$ChargedOff),1)[2,2]
+
+forest_predict = as.numeric(as.character(forest_predict))
+
+bayes_predict = as.numeric(as.character(bayes_predict))
+
+svm_predict = as.numeric(as.character(svm_predict))
+
+
+for (i in 1:length(pred_vote)) {
+  
+  if (forest_predict[i] == 0) {
+    forest_prob_use = forest_0_acc
+    forest_value = 0
+  }
+  else {
+    forest_prob_use = forest_1_acc
+    forest_value = 1
+  }
+  
+  
+  if (bayes_predict[i] == 0) {
+    bayes_prob_use = bayes_0_acc
+    bayes_value = 0
+  }
+  else {
+    bayes_prob_use = bayes_1_acc
+    bayes_value = 1
+  }
+  
+  
+  if (svm_predict[i] == 0) {
+    svm_prob_use = svm_0_acc
+    svm_value = 0
+  }
+  else {
+    svm_prob_use = svm_1_acc
+    svm_value = 1
+  }
+  
+  total_prob = forest_prob_use + bayes_prob_use + svm_prob_use
+  
+  pred_vote[i] = round((forest_prob_use/total_prob)*forest_value + (bayes_prob_use/total_prob)*bayes_value + (svm_prob_use/total_prob)*svm_value)
+}
+```
+
+Bayes predict
+```{r echo=FALSE}
+prop.table(table(bayes_predict,test$ChargedOff),1)
+```
+
+Forest predict
+```{r echo=FALSE}
+prop.table(table(forest_predict,test$ChargedOff),1)
+```
+
+SVM predict
+```{r echo=FALSE}
+prop.table(table(svm_predict,test$ChargedOff),1)
+```
+
+Voting predict
+```{r echo=FALSE}
+prop.table(table(pred_vote, test$ChargedOff),1)
+```
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(loan) + geom_histogram(aes(x=BorrowerAPR, fill = as.factor(ChargedOff)),binwidth = 0.005) + scale_x_continuous(breaks = seq(0,0.5,0.05)) + ggtitle("Borrower APR distribution") + xlab("Borrower APR") + ylab("Number of loans") + ggtitle("APR distribution") + theme_bw()
+```
+
+### Description One
+
+The distribution appears to be bimodal with most loans have APR around 0.2 and 0.35, suggesting that some every risky loans are priced very high. Also, it shows that loans with higher APR have higher charged-off risk.
+
+### Plot Two
+```{r echo=FALSE}
+ggplot(data=loan, aes(x = AverageCreditScore, y = BankcardUtilization)) + geom_point(alpha = 1/20, position = position_jitter(h = 0), color = "green") + coord_trans(y = "sqrt") + geom_line(stat="summary", fun.y = mean, aes(color = "Mean")) + geom_line(stat="summary", fun.y = quantile,probs = 0.9, linetype = "dashed", aes(color = "90th percentile")) + theme_bw() + ggtitle("Average Credit score vs Bank card utilization (percent)") + xlab("Average credit score") + ylab("Bank card utilization (percent)") + scale_color_manual("",breaks = c("90th percentile", "Mean"), values = c("black","red"))
+```
+
+### Description Two
+
+The red line shows that the mean of bank card utilization drops as average credit score increases. Maybe people who have higher credit score are more careful with their credit use. Also, the scatter plot shows that most loans have score within 600-700 and borrowers in this range use almost all of their available revolving credit.
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(data=train,aes(x=AverageCreditScore, y =TotalInquiries, color = as.factor(ChargedOff))) + geom_point(position = position_jitter(h = 0)) + xlab("Average credit score") + ylab("Total number of inquries") + theme_bw() + ggtitle("Default and non-default loans in terms of total inquiries and credit score") + scale_color_discrete(name = "Loan condition", labels = c("Non-charged-off","Charged-off"))
+```
+
+### Description Three
+
+Charged-off loans tend to have 15 or more inquiries and low credit score. On the other hand, Non-charged-off loans have credit scores larger than 600 and mostly below 15 inquiries.
+
+------
+
+# Reflection
+
+The Prosper loan data contain more than 110,000 samples with over 80 features. My original goal was to build a model using machine learning to try to predict the outcome of each loan given the information provided at the time the applicant applies for the loan. By specifying it is the application stage, I reduced the amount of features to around 40 most relevant variables. Then I perform preprocessing using the caret package to eliminate variables that has zero or near zero variance. This is because these variables may become zero variance during the cross-validation process and do not contribute to the overall prediction. I hesitated to decide whether or not to cut down features that highly correlates with other variables. This is because cutting these down will improve naive Bayes algorithm (since naive Bayes assumes independence amoing features), yet this might not seem to be a problem for random forest. After some testing, I found out that the chance in accuracy is not significant. Therefore, I decided to keep these variables to simplify the features. Random forest did very well on predicting non-charged-off loans while naive Bayes did poorly in this category. I decided to use support vector machine to see if this algorithm performs better. It turns out that SVM did a better job at predicting charged-off cases, yet it didn't do very well in predicting non-charged-off ones. I decided to create a voting mechanism to see if the combined result does a better job. Each algorithm's vote is weighted based on their prediction accuracy for that particular class.The final model is the average of predictive power of all three, with the ability classify non-charged-off loans with accuracy of 87%, and charged-off loans with accuracy of 64%.
+
+In conclusion, it seems that with the information that Prosper gather from its borrowers, it can create a good estimate of borrowers' default risk. Modern machine learning algorithms are able to utilize credit history combined with custom credit rating mechanism built by Prosper to predict the likelihood of default with fairly good accuracy. However, I think there is still room for improvement. We can definitely dig out some more data, or use feature engineering to create new data insight to improve our model. With better risk management model, financial intermediaries like Prosper can further reduce cost and efficiently allocate funds between investors and good borrowers.
