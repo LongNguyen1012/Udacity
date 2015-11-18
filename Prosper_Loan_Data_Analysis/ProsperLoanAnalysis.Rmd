@@ -111,7 +111,8 @@ summary(loan$LoanStatus)
 
 After grouping all loans that are defaulted or cancelled to charged-off group and marked 1 and the other loans marked 0, the distribution of charged-off and non-charged-off loans is shown below. 
 ```{r echo=FALSE, cache=TRUE, cache.path='cache/', fig.path='figure/'}
-# Create new dummy variable (ChargedOff) to indicate which loans are charged-off and which are not
+# Create new dummy variable (ChargedOff) to indicate which loans are 
+# charged-off and which are not
 
 loan$ChargedOff = 0
 loan$ChargedOff[loan$LoanStatus %in% c('Chargedoff','Cancelled','Defaulted')] = 1
@@ -191,7 +192,15 @@ rm(loan_var_name)
 
 # Replace missing values in Propsper rating alpha with values from credit grade. 
 
-# Before 2009, credit grade is used as a rating metric for loans posted on Prosper. Grades include AA, A, B, C, D, E, HR, and NC. Grade "NC" is used for borrowers with no credit history. After 2009, because of lack of interest from investors in "NC" loans, the grades are adjusted to exclude "NC", with the ranges of credit score for grade "HR" and "E" changed to reflect the new grade scale. No changes are made to other grades. Therefore, it is appropriate to combine these credit grades with the grades from the new Prosper rating to create a cohesive rating variable, with the exclusion of grade "NC".
+# Before 2009, credit grade is used as a rating metric for loans posted on 
+# Prosper. Grades include AA, A, B, C, D, E, HR, and NC. Grade "NC" is used for 
+# borrowers with no credit history. After 2009, because of lack of interest 
+# from investors in "NC" loans, the grades are adjusted to exclude "NC", 
+# with the ranges of credit score for grade "HR" and "E" changed to reflect 
+# the new grade scale. No changes are made to other grades. Therefore, it is 
+# appropriate to combine these credit grades with the grades from the new 
+# Prosper rating to create a cohesive rating variable, 
+# with the exclusion of grade "NC".
 
 loan = loan[as.character(loan$CreditGrade) != "NC",]
 
@@ -211,7 +220,8 @@ loan = loan[,-n]
 
 
 
-# Remove loans with NAs in Borrower APR feature, since there are just a few of these loans.
+# Remove loans with NAs in Borrower APR feature, 
+# since there are just a few of these loans.
 
 loan = loan[is.na(loan$BorrowerAPR) == FALSE,]
 
@@ -263,7 +273,8 @@ loan = meanImpute(namelist,loan)
 
 
 
-# Impute debt-to-income ratio using simple revolving monthly payment/monthly income
+# Impute debt-to-income ratio using simple revolving 
+# monthly payment/monthly income
 
 n = which(is.na(loan$DebtToIncomeRatio) == TRUE)
 
@@ -271,7 +282,9 @@ loan$DebtToIncomeRatio[n] = loan$OpenRevolvingMonthlyPayment[n]/loan$StatedMonth
 
 
 
-# Since it doesn't make sense to assess the default risk of borrowers that have no income at all, I will exclude information from these borrowers
+# Since it doesn't make sense to assess the default risk of 
+# borrowers that have no income at all, 
+# I will exclude information from these borrowers
 
 loan = loan[loan$StatedMonthlyIncome >= 1,]
 
@@ -307,14 +320,18 @@ auditIncomeRange = function(loan){
   loan$IncomeRange = factor(loan$IncomeRange)
 }
 
-# In order to cut down the number of samples and to be able to utilize more features in my model, I will only consider loans that have prior history with Prosper.
+# In order to cut down the number of samples and 
+# to be able to utilize more features in my model, 
+# I will only consider loans that have prior history with Prosper.
 
 loan = loan[round(loan$TotalProsperLoans) > 0,]
 
 loan = loan[round(loan$ProsperPrincipalBorrowed) > 0,]
 
 
-# Any NAs in late payment or Prosper outstanding principal will be replaced with 0. This is because most borrowers on Prosper do not pay late and have no principal outstanding with Prosper.
+# Any NAs in late payment or Prosper outstanding principal will be 
+# replaced with 0. This is because most borrowers on Prosper do not 
+# pay late and have no principal outstanding with Prosper.
 
 zeroImpute = function(namelist,loan) {
   for (name in namelist) {
@@ -332,7 +349,9 @@ loan = zeroImpute(namelist,loan)
 
 
 
-# Conduct regression tree to fill in missing Prosper Score, attempt to replicate original Prosper Score assignment model. Source: https://www.prosper.com/help/topics/general-prosper_score/
+# Conduct regression tree to fill in missing Prosper Score, 
+# attempt to replicate original Prosper Score assignment model. 
+# Source: #https://www.prosper.com/help/topics/general-prosper_score/
 
 test = loan[is.na(loan$ProsperScore) == TRUE,]
 
@@ -587,7 +606,8 @@ new = loan[, c("ChargedOff",
 
 
 
-# Create new charged-off variable because the original will be lost when using dummyVars to create dummies from categorical variables
+# Create new charged-off variable because the original will be 
+# lost when using dummyVars to create dummies from categorical variables
 
 new$Default = loan$ChargedOff
 
