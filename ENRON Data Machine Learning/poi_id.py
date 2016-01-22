@@ -12,13 +12,13 @@ import pickle
 import numpy as np
 sys.path.append("../tools/")
 
-from feature_format import featureFormat
 from tester import dump_classifier_and_data
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.grid_search import GridSearchCV
 from sklearn.pipeline import make_pipeline
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import SelectPercentile
+from feature_format import featureFormat, targetFeatureSplit  
 
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
@@ -214,10 +214,29 @@ param_grid = dict(pca__n_components = [14,16,18,20], \
                   selectpercentile__percentile = [25,50,75,100], \
                   adaboostclassifier__n_estimators = [20,40,60])
  
-from sklearn.metrics import fbeta_score, make_scorer    
+from sklearn.metrics import fbeta_score, make_scorer
+from sklearn.cross_validation import StratifiedShuffleSplit, train_test_split
+  
+data = featureFormat(my_dataset, features_list, sort_keys = True)
+labels, features = targetFeatureSplit(data)
+
+features_train,_,labels_train,_ = train_test_split(features, labels, test_size = 0.3, random_state = 52)
             
 scorer = make_scorer(fbeta_score, beta = 1e100)
-clf = GridSearchCV(pipeline, param_grid, scoring = scorer)
+cv = StratifiedShuffleSplit(labels_train, n_iter = 30, random_state = 52)
+clf = GridSearchCV(pipeline, param_grid, scoring = scorer, cv = cv).fit(features_train, labels_train)
+
+### Fit initial data for optimal parameters
+best_params = clf.best_params_
+components = best_params['pca__n_components']
+percentile = best_params['selectpercentile__percentile']
+estimator = best_params['adaboostclassifier__n_estimators']
+
+pipeline.set_params(pca__n_components = components, \
+                    selectpercentile__percentile = percentile, \
+                    adaboostclassifier__n_estimators = estimator)
+
+clf = pipeline
 
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure
