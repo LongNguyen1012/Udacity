@@ -1,0 +1,1 @@
+Using Prosper loan data, I visualize the risk and return trade off of various types of Prosper loan and comapre them with some of the most popular mutual funds in the market. I also include an additional chart to visualize the distribution of loans within each category, It helps readers see what terms are available for investing, and at what risk and return

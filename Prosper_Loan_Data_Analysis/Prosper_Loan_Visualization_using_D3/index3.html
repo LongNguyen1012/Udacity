@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+	    <link rel="stylesheet" href="svg.css">
+		<link rel="stylesheet" href="style.css">
+        <title>Efficient Frontier</title>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+		<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js">
+		// local "js/d3.tip.js"
+		</script>
+    </head>
+    <body>
+		<div id="wrapper">
+		
+			<div id="chart">
+			</div>
+		
+			<div id="title">
+				<h1>Risk - Return Trade Off of Prosper Loans and other Portfolios</h1>
+			</div>
+
+			<div id="about">
+				<!-- <h4>About</h4> -->
+				<p><strong>Is it better to invest in Prosper loans?</strong></p>
+				<p>This scatterplot plots the risk-return trade off of various popular mutual funds and types of Prosper loans. Start by clicking the term to see how differnt types of Prosper loan perfoms over various time frame.</p>
+				<p>Risk of each type of Prosper loan is the average of its estimated loss, whie return is the average of its estimated effective yield. For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period.</p>
+				<p>The darker the color hue, the higher the Sharpe ratio of the portfolio.</p>
+			</div>
+			
+			<div id="menu">
+				<ul id="feature-options-menu"></ul>
+			</div>
+		
+		</div>
+		<script type="text/javascript">	
+		
+		var feature = "One year";
+		var xfeature = "Risk " + feature;
+		var yfeature = "Return " + feature;
+		var sharpe = "Sharpe " + feature; 
+		var tip_sharpe;
+		var feature_options = ["One year", "Three year", "Five year"]
+		
+		// Set the dimensions of the canvas / graph
+		var margin = {top: 70, right: 65, bottom: 60, left: 60},
+			width = 1200 - margin.left - margin.right,
+			height = 640 - margin.top - margin.bottom,
+			r = 30,
+			m = 4,
+			z = d3.scale.category10();;
+		
+		// Create linear scale
+		var x = d3.scale.linear()
+			.range([0, width]);
+		
+		var y = d3.scale.linear()
+			.range([height ,0]);
+		
+		// Create canvas for first chart
+		var svg = d3.select("#chart")
+				.append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom);
+					
+		svg.append('g')
+			.classed('chart', true)
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
+		
+		// Get the data for the first chart
+ 	    d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData1.csv", function(data) {
+			
+			"use strict";
+			
+			var tip = d3.tip()
+				.attr('class', 'd3-tip')
+				.offset([-10, 0])
+				.html(function(d, i) {
+					tip_sharpe = "Sharpe " + feature;
+					return "<p><strong>Risk:</strong> <span style='color:red'>" + d[xfeature] + "</span></p>" +
+						   "<p><strong>Return:</strong> <span style='color:green'>" + d[yfeature] + "</span></p>" +
+						   "<p><strong>Sharpe:</strong> <span style='color:yellow'>" + d[tip_sharpe] + "</span></p>";
+				});
+		
+			svg.call(tip)
+			
+			data.forEach(function(d) {
+				d["Return One year"] = +d["Return One year"];
+				d["Risk One year"] = +d["Risk One year"];
+				d["Return Three year"] = +d["Return Three year"];
+				d["Risk Three year"] = +d["Risk Three year"];
+				d["Return Five year"] = +d["Return Five year"];
+				d["Risk Five year"] = +d["Risk Five year"];
+			});
+			
+			var ymax = d3.max(data, function(d) { return d["Return Five year"];});
+			var xmax = d3.max(data, function(d) { return d["Risk Five year"];});
+			var sharpe_max = d3.max(data, function(d) { return d["Sharpe Five year"];});
+			
+			x.domain([0,xmax]);
+			y.domain([0,ymax]);
+			
+			// Area that will display portfolio name
+			d3.select('svg g.chart')
+				.append('text')
+				.attr({'id': 'rating', 'x': 100, 'y': 130})
+				.style({'font-size': '80px', 'font-weight': 'bold', 'fill': '#ddd'});
+					
+			
+			// Define the axes
+			var formatPercent = d3.format(".0%");			
+			
+			var xAxis = d3.svg.axis().scale(x)
+				.tickFormat(formatPercent)
+				.orient("bottom");
+
+			var yAxis = d3.svg.axis().scale(y)
+				.tickSize(-width,0,0)
+				.tickFormat(formatPercent)
+				.orient("left");
+			
+			// Add the Axis
+			d3.select('svg g.chart')
+				.append("g")
+				.attr("transform", "translate(0," + height + ")")
+				.attr('id', 'xAxis')
+				.call(xAxis)
+				.append("text")
+				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
+				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")  // centre below axis
+				.text("Total risk as a percentage of possible loss of initial investment");
+
+			d3.select('svg g.chart')
+				.append("g")
+				.attr('id', 'yAxis')
+				.attr("transform", "translate(0,0)") 
+				.call(yAxis)
+				.append("text")
+				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
+				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+				.text("Total return as a percentage gain of initial investment");
+		
+			// Build menus
+		    d3.select('#feature-options-menu')
+				.selectAll('li')
+				.data(feature_options)
+				.enter()
+				.append('li')
+				.text(function(d) {return d;})
+				.style('cursor', 'pointer')
+				.classed('selected', function(d) {
+					return d === feature;
+				})
+				.on('click', function(d) {
+					feature = d;
+					updateChart();
+					updateMenus();
+				});
+
+			// Render initial points
+			
+			// Define color scale for Prosper portfolio and other portfolios
+			var prosper_pointColour = d3.scale.linear()
+										.domain([0, 6])
+										.interpolate(d3.interpolateHcl)
+										.range([d3.rgb("#ccffcc"), d3.rgb("#003300")]);
+										
+			var other_pointColour = d3.scale.linear()
+										.domain([0, 1])
+										.interpolate(d3.interpolateHcl)
+										.range([d3.rgb("#ffcccc"), d3.rgb("#4d0000")]);
+			
+			var circles = d3.select('svg g.chart')
+				.selectAll('circle')
+				.data(data)
+				.enter().append("g");
+				
+			circles.append('circle')
+				.attr('cx', function(d) {
+					return isNaN(d[xfeature]) ? d3.select(this).attr('cx') : x(d[xfeature]);
+				})
+				.attr('cy', function(d) {
+					return isNaN(d[yfeature]) ? d3.select(this).attr('cy') : y(d[yfeature]);
+				})
+				.attr('fill', function(d, i) {
+					if (i <= 6) {
+						return prosper_pointColour(d[sharpe]);
+					} else {
+						return other_pointColour(d[sharpe]); 
+					}
+				})
+				.attr("r", function(d) {
+					if ((isNaN(d[xfeature])) || (isNaN(d[yfeature]))) { 
+						return 0;
+					}
+					else {
+						return 15;
+					}})
+				.style('cursor', 'pointer')
+				.on('mouseover', tip.show)
+				.on('mouseout', tip.hide);
+
+			updateChart(true);
+			updateMenus();
+			
+			circles.append("text")
+				.attr("id", "label")
+				.attr("dx", function(d) {
+					return isNaN(d[xfeature]) ? d3.select(this).attr('dx') : x(d[xfeature]);
+				})
+				.attr("dy", function(d) {
+					return isNaN(d[yfeature]) ? d3.select(this).attr('dy') : y(d[yfeature]) - 20;
+				})
+				.attr("text-anchor", "middle")
+				.text(function(d){
+					return isNaN(d[xfeature]) ? "" : d.Rating;
+				});
+  
+			 // Rendering functions
+			function updateChart(init) {
+				
+				xfeature = "Risk " + feature;
+				yfeature = "Return " + feature;
+				sharpe = "Sharpe " + feature;
+				
+				d3.select('svg g.chart')
+					.selectAll('circle')
+					.transition()
+					.duration(500)
+					.ease('quad-out')
+					.attr('cx', function(d) {
+						return isNaN(d[xfeature]) ? d3.select(this).attr('cx') : x(d[xfeature]);
+					})
+					.attr('cy', function(d) {
+						return isNaN(d[yfeature]) ? d3.select(this).attr('cy') : y(d[yfeature]);
+					})
+					.attr('r', function(d) {
+						if ((isNaN(d[xfeature])) || (isNaN(d[yfeature]))) { 
+							return 0;
+						}
+						else {
+							return 15;
+						}
+					})
+					.attr('fill', function(d, i) {
+						if (i <= 6) {
+							return prosper_pointColour(d[sharpe]);
+						} else {
+							return other_pointColour(d[sharpe]); 
+						}
+					});
+				
+				d3.selectAll("#label")
+					.style('opacity', 0)
+					.attr("dx", function(d) {
+						return isNaN(d[xfeature]) ? d3.select(this).attr('dx') : x(d[xfeature]);
+					})
+					.attr("dy", function(d) {
+						return isNaN(d[yfeature]) ? d3.select(this).attr('dy') : y(d[yfeature]) - 20;
+					})
+					.attr("text-anchor", "middle")
+					.text(function(d){
+						return isNaN(d[xfeature]) ? "" : d.Rating;
+					})
+					.transition()
+					.duration(1500)
+					.style('opacity', 1)
+			};
+			
+			// Update menus function
+			function updateMenus() {
+				d3.select('#feature-options-menu')
+				.selectAll('li')
+				.classed('selected', function(d) {
+					return d === feature;
+				});
+			}
+		});
+	</script>
+    </body>
+</html>     

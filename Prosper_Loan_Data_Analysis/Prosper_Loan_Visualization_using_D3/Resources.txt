@@ -1,0 +1,6 @@
+Resources:
+
+https://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.eventArgs
+https://github.com/mbostock/d3/wiki/Transitions
+http://stackoverflow.com/questions/24989128/why-is-my-d3-tip-not-working
+https://www.udacity.com/course/viewer#!/c-ud507-nd/l-3069149263/m-3071138983

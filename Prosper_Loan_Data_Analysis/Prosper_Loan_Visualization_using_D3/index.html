@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+ <html lang="en">
+     <head>
+		<meta charset="utf-8">
+		<link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="svg.css">
+        <title>Prosper Loan Visualization</title>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+		<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    </head>
+    <body>
+ 	<div id="wrapper">
+		
+		<div id="chart"></div>
+
+		<div id="title">
+			<h1>Prosper Loan Visualization</h1>
+ 		</div>
+ 
+ 		<div id="about">
+		<!-- <h4>About</h4> -->
+ 			<p><strong>Is it better to invest in Prosper loans?</strong></p>
+			<p>This scatterplot plots the risk-return trade off of various popular mutual 
+			funds and types of Prosper loans. Start by clicking the term to see how differnt types 
+			of Prosper loan perfoms over various time frame.</p>
+
+ 			
+ 			<p>Risk of each type of Prosper loan is the average of its estimated loss, 
+			whie return is the average of its estimated effective yield. For mutual funds, 
+			standard deviation is used to measure risk, and total return is used to 
+			measure return over each period.</p>
+
+ 		</div>
+ 		
+ 		<div id="menu">
+ 			<ul id="feature-options-menu"></ul>
+ 		</div>
+			
+		<div id="explain">
+			<!-- <h4>About</h4> -->
+			<p><strong>How does an investment in Prosper look like?</strong></p>
+			<p>This scatterplot show how many loans of each term is in each rating category. 
+			It shows us the risk of investing in Prosper from a different perspective</p>
+			
+			<p>Loans are not equally distribute within each rating category. 
+			Most loans have three year term; therefore, investors looking to invest in Prosper 
+			should have a moderate horizon in mind. Also, some high risk category only includes short term loans, 
+			which adds additional risk since there is less time available for any refinancing.</p>
+			
+			<p>Built by <a href="https://github.com/LongNguyen1012">Long Nguyen</a>.</p>
+		</div>
+			
+		<div id="explain_chart"></div>
+			
+ 	</div>
+ 	<script type="text/javascript">	
+
+ 		
+		var newdata;
+		var feature = "One year";
+		var xfeature = "Return " + feature;
+		var yfeature = "Risk " + feature;
+		var feature_options = ["One year", "Three year", "Five year"]
+
+ 		
+		// Set the dimensions of the canvas / graph
+		var margin = {top: 50, right: 50, bottom: 50, left: 50},
+			width = 1000 - margin.left - margin.right,
+			height = 640 - margin.top - margin.bottom,
+			r = 30,
+			m = 4,
+			z = d3.scale.category10();;
+
+ 		
+		// Create liner scale
+		var x = d3.scale.linear()
+			.range([0, width]);
+
+ 		
+		var y = d3.scale.linear()
+			.range([height, 0]);
+
+ 		
+		// Create canvas for first chart
+		var svg = d3.select("#chart")
+				.append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom);
+
+ 		
+		// Create canvas for second chart
+		var explain_svg = d3.select("#explain_chart")
+				.append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom);
+					
+		svg.append('g')
+			.classed('chart', true);
+			
+		explain_svg.append('g')
+			.classed('explain_chart', true);
+
+ 		
+		// Get the data for the first chart
+ 	        d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData1.csv", function(data) {
+			
+			"use strict";
+			
+			data.forEach(function(d) {
+				d["Return_one_year"] = +d["Return_one_year"];
+				d["Risk_one_year"] = +d["Risk_one_year"];
+				d["Return_three_year"] = +d["Return_three_year"];
+				d["Risk_three_year"] = +d["Risk_three_year"];
+				d["Return_five_year"] = +d["Return_five_year"];
+				d["Risk_five_year"] = +d["Risk_five_year"];
+				d["Sharpe_ratio_one_year"] = +d["Sharpe_ratio_one_year"];
+				d["Sharpe_ratio_three_year"] = +d["Sharpe_ratio_three_year"];
+				d["Sharpe_ratio_five_year"] = +d["Sharpe_ratio_five_year"];
+			});
+ 
+			x.domain([0,0.25]);
+			y.domain([0,0.25]);
+			
+			// Area that will display portfolio name
+			d3.select('svg g.chart')
+				.append('text')
+				.attr({'id': 'rating', 'x': 100, 'y': 130})
+				.style({'font-size': '80px', 'font-weight': 'bold', 'fill': '#ddd'});
+				
+			
+			// Define the axes
+			var xAxis = d3.svg.axis().scale(x)
+				.orient("bottom").ticks(5);
+
+			var yAxis = d3.svg.axis().scale(y)
+				.tickSize(-width, 0, 0)
+				.orient("left").ticks(5);
+			
+			// Add the Axis
+			d3.select('svg g.chart')
+			.append("g")
+				.attr("transform", "translate(" + margin.left + "," + (height + margin.top) + ")")
+				.attr('id', 'xAxis')
+				.call(xAxis)
+				.append("text")
+				.attr("text-anchor", "middle")  
+				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")
+				.text("Total return as a percentage gain of initial investment");
+			d3.select('svg g.chart')
+				.append("g")
+				.attr('id', 'yAxis')
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+				.call(yAxis)
+				.append("text")
+				.attr("text-anchor", "middle")  
+				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")  
+				.text("Total risk as a percentage of possible loss of initial investment");
+		
+			// Build menus
+		        d3.select('#feature-options-menu')
+				.selectAll('li')
+				.data(feature_options)
+				.enter()
+				.append('li')
+				.text(function(d) {return d;})
+				.style('cursor', 'pointer')
+				.classed('selected', function(d) {
+					return d === feature;
+				})
+				.on('click', function(d) {
+					feature = d;
+					updateChart();
+					updateMenus();
+				});
+
+			// Render initial points
+			var pointColour = d3.scale.category20b();
+ 			d3.select('svg g.chart')
+				.selectAll('circle')
+				.data(data)
+				.enter()
+				.append('circle')
+ 				.attr('cx', function(d) {
+					return isNaN(d[xfeature]) ? d3.select(this).attr('cx') : x(d[xfeature]);
+				})
+				.attr('cy', function(d) {
+					return isNaN(d[yfeature]) ? d3.select(this).attr('cy') : y(d[yfeature]);
+				})
+				.attr('fill', function(d, i) {return pointColour(i);})
+				.attr("r", function(d) {
+					if ((isNaN(d[xfeature])) || (isNaN(d[yfeature]))) { 
+						return 0;
+					}
+					else {
+						return 15;
+					}})
+				.style('cursor', 'pointer')
+				.on('mouseover', function(d) {
+				d3.select('svg g.chart #rating')
+					.text(d.Rating)
+					.transition()
+					.style('opacity', 1);
+				})
+				.on('mouseout', function(d) {
+					d3.select('svg g.chart #rating')
+						.transition()
+						.duration(1500)
+						.style('opacity', 0);
+					});
+
+			updateChart(true);
+			updateMenus();
+  
+			 // Rendering functions
+			function updateChart(init) {
+				
+				xfeature = "Return " + feature;
+				yfeature = "Risk " + feature;
+				
+				d3.select('svg g.chart')
+					.selectAll('circle')
+					.transition()
+					.duration(500)
+					.ease('quad-out')
+					.attr('cx', function(d) {
+						return isNaN(d[xfeature]) ? d3.select(this).attr('cx') : x(d[xfeature]);
+					})
+					.attr('cy', function(d) {
+						return isNaN(d[yfeature]) ? d3.select(this).attr('cy') : y(d[yfeature]);
+					})
+					.attr('r', function(d) {
+						if ((isNaN(d[xfeature])) || (isNaN(d[yfeature]))) { 
+							return 0;
+						}
+						else {
+							return 15;
+				}});
+			}
+			
+			// Update menus function
+			function updateMenus() {
+				d3.select('#feature-options-menu')
+				.selectAll('li')
+				.classed('selected', function(d) {
+					return d === feature;
+				});
+			}
+		});
+		
+		// Get the data for the second chart
+ 	    d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData2.csv", function(data) {
+			
+			"use strict";
+			
+			var name;
+			var term;
+			var id; // This variable is used to keep track of the index of each data point
+			
+			var tip = d3.tip()
+				.attr('class', 'd3-tip')
+				.offset([-10, 0])
+				.html(function(d, i) {
+					id = d3.select(this.parentNode).attr("id");
+					if (i == 0) {
+						term = "one_year";
+						return "<strong>One year term:</strong> <span style='color:red'>" 
+							+ data[id][term] 
+							+ "</span>";
+					}
+					if (i == 1) {
+						term = "three_year";
+						return "<strong>Three year term:</strong> <span style='color:red'>" 
+						+ data[id][term] 
+						+ "</span>";
+					}
+					if (i == 2) {
+						term = "five_year";
+						return "<strong>Five year term:</strong> <span style='color:red'>" 
+						+ data[id][term] 
+						+ "</span>";
+					}
+				});
+		
+			explain_svg.call(tip)
+		
+			data.forEach(function(d) {
+				d["Return"] = +d["Return"];
+				d["Risk"] = +d["Risk"];
+				d["one_year"] = +d["one_year"];
+				d["three_year"] = +d["three_year"];
+				d["five_year"] = +d["five_year"];
+			});
+			
+			// Hand-made data. The idea is to create an svg g element for each row, 
+			// and then each row will hold another svg g element for each pie, 
+			// this svg g element again will hold several pieces of pie, each is represenetd by one g element 
+			var AAPort = [data[0]["one_year"], data[0]["three_year"], data[0]["five_year"]];
+			var APort = [data[1]["one_year"], data[1]["three_year"], data[1]["five_year"]];
+			var BPort = [data[2]["one_year"], data[2]["three_year"], data[2]["five_year"]];
+			var CPort = [data[3]["one_year"], data[3]["three_year"], data[3]["five_year"]];
+			var DPort = [data[4]["one_year"], data[4]["three_year"], data[4]["five_year"]];
+			var EPort = [data[5]["one_year"], data[5]["three_year"], data[5]["five_year"]];
+			var HRPort = [data[6]["one_year"], data[6]["three_year"], data[6]["five_year"]];
+			newdata = [AAPort, APort, BPort, CPort, DPort, EPort, HRPort];
+			
+			x.domain([0,0.25]);
+			y.domain([0,0.25]);
+			
+			// Define the axes
+			var xAxis = d3.svg.axis().scale(x)
+				.orient("bottom").ticks(5);
+
+			var yAxis = d3.svg.axis().scale(y)
+				.tickSize(-width,0,0)
+				.orient("left").ticks(5);
+				
+			
+			// Create several svg g elements, each corresponding with a Prosper loan type
+			var elemEnter = explain_svg.selectAll("svg")
+				.data(newdata)
+				.enter().append("svg")
+					.attr("width", (r + m) * 40)
+					.attr("height", (r + m) * 40)
+				.append("g")
+					.attr("class","portfolio")
+					.attr("id", function(d, i) {
+						return i;
+					})
+					.attr("transform", function(d, i) {
+						return "translate(" + (x(data[i]["Return"]) + m) 
+							+ "," 
+							+ (y(data[i]["Risk"]) + m) + ")";
+					});
+			
+			// Add the Axis
+			d3.select("svg g.explain_chart")
+				.append("g")
+				.attr("id", "xAxis")
+				.attr("transform", "translate(" + margin.left + "," + (height + margin.top) + ")")
+				.call(xAxis)
+				.append("text")
+				.attr("text-anchor", "middle") 
+				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")
+				.text("Total return as a percentage gain of initial investment");
+			
+			d3.select("svg g.explain_chart")
+				.append("g")
+				.attr("id", "yAxis")
+				.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+				.call(yAxis)
+				.append("text")
+				.attr("text-anchor", "middle")  
+				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)") 
+				.text("Total risk as a percentage of possible loss of initial investment");
+			
+			// Add the pies
+			var piechart = d3.selectAll(".portfolio")
+				.append("svg")
+					.attr("width", (r + m) * 40)
+					.attr("height", (r + m) * 40)
+					.attr("id", function(d) {
+						return d3.select(this.parentNode).attr("id");
+					})
+				.append("g")
+					.attr("transform", "translate(" + (r + m) + "," + (r + m) + ")")
+					.attr("id", function(d) {
+						return d3.select(this.parentNode).attr("id");
+					});
+					
+			// Create the text for each pie
+			piechart.append("text")
+				.text(function(d, i){return data[i]["Rating"];})
+				.attr("text-anchor", "middle");
+			
+			// Draw pieces of pie
+			var g = piechart.selectAll("g")
+				.data(d3.layout.pie())
+				.enter().append("g")
+				.on('mouseover', tip.show)
+				.on('mouseout', tip.hide);
+				
+			g.append("path")
+				.attr("d", d3.svg.arc()
+						.outerRadius(r)
+						.innerRadius(r / 2))
+				.style("fill", function(d, i) { return z(i); });
+		});
+	
+	</script>
+    </body>
+</html>      
