@@ -23,8 +23,17 @@
 			<div id="about">
 				<!-- <h4>About</h4> -->
 				<p><strong>Is it better to invest in Prosper loans?</strong></p>
-				<p>This scatterplot plots the risk-return trade off of various popular mutual funds and types of Prosper loans. Start by clicking the term to see how differnt types of Prosper loan perfoms over various time frame.</p>
-				<p>Risk of each type of Prosper loan is the average of its estimated loss, whie return is the average of its estimated effective yield. For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period.</p>
+				
+				<p>This scatterplot plots the risk-return trade off of various popular 
+				mutual funds and types of Prosper loans. 
+				Start by clicking the term to see how differnt types of Prosper loan perfoms 
+				over various time frame.</p>
+				
+				<p>Risk of each type of Prosper loan is the average of its estimated loss, 
+				whie return is the average of its estimated effective yield. 
+				For mutual funds, standard deviation is used to measure risk, 
+				and total return is used to measure return over each period.</p>
+				
 				<p>The darker the color hue, the higher the Sharpe ratio of the portfolio.</p>
 			</div>
 			
@@ -77,9 +86,12 @@
 				.offset([-10, 0])
 				.html(function(d, i) {
 					tip_sharpe = "Sharpe " + feature;
-					return "<p><strong>Risk:</strong> <span style='color:red'>" + d[xfeature] + "</span></p>" +
-						   "<p><strong>Return:</strong> <span style='color:green'>" + d[yfeature] + "</span></p>" +
-						   "<p><strong>Sharpe:</strong> <span style='color:yellow'>" + d[tip_sharpe] + "</span></p>";
+					return "<p><strong>Risk:</strong> <span style='color:red'>" + 
+						d[xfeature] + "</span></p>" +
+						"<p><strong>Return:</strong> <span style='color:green'>" + 
+						d[yfeature] + "</span></p>" +
+						"<p><strong>Sharpe:</strong> <span style='color:yellow'>" + 
+						d[tip_sharpe] + "</span></p>";
 				});
 		
 			svg.call(tip)
@@ -126,8 +138,8 @@
 				.attr('id', 'xAxis')
 				.call(xAxis)
 				.append("text")
-				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
-				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")  // centre below axis
+				.attr("text-anchor", "middle")
+				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")
 				.text("Total risk as a percentage of possible loss of initial investment");
 
 			d3.select('svg g.chart')
@@ -136,8 +148,8 @@
 				.attr("transform", "translate(0,0)") 
 				.call(yAxis)
 				.append("text")
-				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
-				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+				.attr("text-anchor", "middle")
+				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")
 				.text("Total return as a percentage gain of initial investment");
 		
 			// Build menus
@@ -161,14 +173,14 @@
 			
 			// Define color scale for Prosper portfolio and other portfolios
 			var prosper_pointColour = d3.scale.linear()
-										.domain([0, 6])
-										.interpolate(d3.interpolateHcl)
-										.range([d3.rgb("#ccffcc"), d3.rgb("#003300")]);
+				.domain([0, 6])
+				.interpolate(d3.interpolateHcl)
+				.range([d3.rgb("#ccffcc"), d3.rgb("#003300")]);
 										
 			var other_pointColour = d3.scale.linear()
-										.domain([0, 1])
-										.interpolate(d3.interpolateHcl)
-										.range([d3.rgb("#ffcccc"), d3.rgb("#4d0000")]);
+				.domain([0, 1])
+				.interpolate(d3.interpolateHcl)
+				.range([d3.rgb("#ffcccc"), d3.rgb("#4d0000")]);
 			
 			var circles = d3.select('svg g.chart')
 				.selectAll('circle')
