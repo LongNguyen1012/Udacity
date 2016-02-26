@@ -77,7 +77,7 @@
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
 		
 		// Get the data for the first chart
- 	    d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData1.csv", function(data) {
+ 	    	d3.csv("prosperLoanData1.csv", function(data) {
 			
 			"use strict";
 			
@@ -153,7 +153,7 @@
 				.text("Total return as a percentage gain of initial investment");
 		
 			// Build menus
-		    d3.select('#feature-options-menu')
+		    	d3.select('#feature-options-menu')
 				.selectAll('li')
 				.data(feature_options)
 				.enter()
