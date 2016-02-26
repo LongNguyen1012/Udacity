@@ -102,7 +102,7 @@
 
  		
 		// Get the data for the first chart
- 	        d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData1.csv", function(data) {
+ 	        d3.csv("prosperLoanData1.csv", function(data) {
 			
 			"use strict";
 			
@@ -146,6 +146,7 @@
 				.attr("text-anchor", "middle")  
 				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")
 				.text("Total return as a percentage gain of initial investment");
+				
 			d3.select('svg g.chart')
 				.append("g")
 				.attr('id', 'yAxis')
@@ -248,7 +249,7 @@
 		});
 		
 		// Get the data for the second chart
- 	    d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData2.csv", function(data) {
+ 	    	d3.csv("prosperLoanData2.csv", function(data) {
 			
 			"use strict";
 			
