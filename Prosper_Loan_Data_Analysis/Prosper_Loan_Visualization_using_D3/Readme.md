@@ -1,5 +1,4 @@
 ## Summary
-<<<<<<< HEAD
 Prosper Marketplace is America's first peer-to-peer lending marketplace, with more than 2.2 million members and over $5 billion in funded loans. 
 Borrowers request personal loans on Prosper and investors (individual or institutional) can fund anywhere from $2,000 to $35,000 per loan request. 
 In addition to credit scores, ratings, and histories, investors can consider borrowers’ personal loan descriptions, endorsements from friends, and community affiliations. 
