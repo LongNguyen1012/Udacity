@@ -23,8 +23,10 @@
 			<div id="about">
 				<!-- <h4>About</h4> -->
 				<p><strong>Is it better to invest in Prosper loans?</strong></p>
-				<p>This scatterplot plots the risk-return trade off of various popular mutual funds and types of Prosper loans. Start by clicking the term to see how differnt types of Prosper loan perfoms over various time frame.</p>
-				<p>Risk of each type of Prosper loan is the average of its estimated loss, whie return is the average of its estimated effective yield. For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period.</p>
+				<p>This scatterplot plots the risk-return trade off of various popular mutual funds and types of Prosper loans. 
+				Start by clicking the term to see how differnt types of Prosper loan perfoms over various time frame.</p>
+				<p>Risk of each type of Prosper loan is the average of its estimated loss, while return is the average of its estimated effective yield. 
+				For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period. For details regarding the methodology, please refer to the Readme file.</p>
 				<p>The darker the color hue, the higher the Sharpe ratio of the portfolio.</p>
 			</div>
 			
@@ -68,7 +70,7 @@
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
 		
 		// Get the data for the first chart
- 	    d3.csv("http://localhost:8888/My-1st-Project/D3/prosperLoanData1.csv", function(data) {
+ 	    d3.csv("http://localhost:8888/My-1st-Project/Udacity_Course_Projects/Prosper_Loan_Data_Analysis/Prosper_Loan_Visualization_using_D3/prosperLoanData1.csv", function(data) {
 			
 			"use strict";
 			
