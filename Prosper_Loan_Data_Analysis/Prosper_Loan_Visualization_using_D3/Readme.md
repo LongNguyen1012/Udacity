@@ -36,28 +36,15 @@ of other similar loans in the past, not on the loan itself. The loan's term is n
 This explains why for 1-year period, risk data is only available for Prosper loans, not for other portfolios.
 
 The Sharpe Ratio is a measure for calculating risk-adjusted return, and this ratio has become the industry standard for such calculations. It was developed by Nobel laureate William F. Sharpe. In simple term, Sharpe ratio
-measures how much investors are rewarded for each unit of risk taken. In this chart, Sharpe ratio calculation is simplified, which assumes risk free rate is 0. Higher Sharpe ratio is better, because investors are rewarded more for same level of risk. The color hue is used to represent the value of Sharpe ratio.
-The darker the color hue, the higher the Sharpe ratio of the portfolio.
+measures how much investors are rewarded for each unit of risk taken. In this chart, Sharpe ratio calculation is simplified, which assumes risk free rate is 0. Higher Sharpe ratio is better, because investors are rewarded more for same level of risk. The color hue is used to represent the value of Sharpe ratio. The darker the color hue, the higher the Sharpe ratio of the portfolio.
 
 Initially, I have two charts on my page, one displaying the risk/return trade off; the other one shows how many loans of each term are in each specific rating category. 
-The first chart is a scatter plot, while the second chart is a combination of scatter plot and pie charts. Scatter plot is used because we want to project each loan on two dimensions (risk and return); 
-therefore, the easiest way to do this is using scatter plot with x and y axis.
-In the second chart, scatter plot shows the risk/return of each type of Prosper loan, 
-while the pie chart shows how many of each types are 12, 36, and 60 months term. Scatter plots can only be used to express two features, thus I think I can express another feature using another chart on top
-of scater plot, and pie chart seems to be a good one. However, after collecting feedback, I realized that the second chart is redundant, 
-and decided to update only one the first chart. Thus, the new chart not only displays scatter plots, 
+
+The first chart is a scatter plot, while the second chart is a combination of scatter plot and pie charts. Scatter plot is used because we want to project each loan on two dimensions (risk and return); therefore, the easiest way to do this is using scatter plot with x and y axis.
+
+In the second chart, scatter plot shows the risk/return of each type of Prosper loan, while the pie chart shows how many of each types are 12, 36, and 60 months term. Scatter plots can only be used to express two features, thus I think I can express another feature using another chart on top of scater plot, and pie chart seems to be a good one. However, after collecting feedback, I realized that the second chart is redundant, and decided to update only one the first chart. Thus, the new chart not only displays scatter plots, 
 but also tool tips to show the details of each portfolio, separate colors to distiguish between Prosper loans and other portfolios, 
 and color hue to show the magniutde of Sharpe ratio. Color hue is used because it can be used on top of scatter plot to express more information without making the chart confusing or messy.
-=======
-Using Prosper loan data, I visualize the risk and return trade off of various types of Prosper loan and comapre them with some of the most popular mutual funds in the market. 
-
-Risk of each type of Prosper loan is the average of its estimated loss, whie return is the average of its estimated effective yield. For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period.
-
-The darker the color hue, the higher the Sharpe ratio of the portfolio.
-
-## Design
-Initially, I have two charts on my page, one displaying the risk/return trade off; the other one shows how many loans of each term are in each specific rating category. The first chart is a scatter plot, while the second chart is a combination of scatter plot and pie charts. In the second chart, scatter plot shows the risk/return of each type of Prosper loan, while the pie chart shows how many of each types are 12, 36, and 60 months term. However, after collecting feedback, I realized that the second chart is redundant, and decided to update only one the first chart. Thus, the new chart not only displays scatter plots, but also tool tips to show the details of each portfolio, separate colors to distiguish between Prosper loans and other portfolios, and color hue to show the magniutde of Sharpe ratio. 
->>>>>>> e0c7f49015ac1f6ec3ced1114b70263f21166f02
 
 ## Feedback
 
@@ -140,8 +127,5 @@ I hope this helps! Great job on your first iteration!
 https://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.eventArgs
 https://github.com/mbostock/d3/wiki/Transitions
 http://stackoverflow.com/questions/24989128/why-is-my-d3-tip-not-working
-<<<<<<< HEAD
 https://www.udacity.com/course/viewer#!/c-ud507-nd/l-3069149263/m-3071138983
-=======
 https://www.udacity.com/course/viewer#!/c-ud507-nd/l-3069149263/m-3071138983
->>>>>>> e0c7f49015ac1f6ec3ced1114b70263f21166f02
