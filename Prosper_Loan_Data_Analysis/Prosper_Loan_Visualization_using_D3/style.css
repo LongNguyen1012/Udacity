@@ -44,12 +44,6 @@ body {
   font-size: 12px;
 }
 
-div.buttons div {
-  font-weight: bold;
-  padding: 5px;
-
-}
-
 #menu {
   position: absolute;
   top: 95px;
