@@ -42,7 +42,7 @@ Initially, I have two charts on my page, one displaying the risk/return trade of
 
 The first chart is a scatter plot, while the second chart is a combination of scatter plot and pie charts. Scatter plot is used because we want to project each loan on two dimensions (risk and return); therefore, the easiest way to do this is using scatter plot with x and y axis.
 
-In the second chart, scatter plot shows the risk/return of each type of Prosper loan, while the pie chart shows how many of each types are 12, 36, and 60 months term. Scatter plots can only be used to express two features, thus I think I can express another feature using another chart on top of scater plot, and pie chart seems to be a good one. However, after collecting feedback, I realized that the second chart is redundant, and decided to update only one the first chart. Thus, the new chart not only displays scatter plots, 
+In the second chart, scatter plot shows the risk/return of each type of Prosper loan, while the pie chart shows how many of each types are 12, 36, and 60 months term. Scatter plots can only be used to express two features, thus I think I can express another feature using another chart on top of scater plot, and pie chart seems to be a good one. However, after collecting feedback, I realized that the second chart is redundant, and decided to update only the first chart. Thus, the new chart not only displays scatter plots, 
 but also tool tips to show the details of each portfolio, separate colors to distiguish between Prosper loans and other portfolios, 
 and color hue to show the magniutde of Sharpe ratio. Color hue is used because it can be used on top of scatter plot to express more information without making the chart confusing or messy.
 
