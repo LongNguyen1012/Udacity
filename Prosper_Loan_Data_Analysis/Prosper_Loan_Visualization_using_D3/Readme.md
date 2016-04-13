@@ -1,4 +1,5 @@
 ## Summary
+<<<<<<< HEAD
 Prosper Marketplace is America's first peer-to-peer lending marketplace, with more than 2.2 million members and over $5 billion in funded loans. 
 Borrowers request personal loans on Prosper and investors (individual or institutional) can fund anywhere from $2,000 to $35,000 per loan request. 
 In addition to credit scores, ratings, and histories, investors can consider borrowers’ personal loan descriptions, endorsements from friends, and community affiliations. 
@@ -130,4 +131,8 @@ I hope this helps! Great job on your first iteration!
 https://github.com/PMSI-AlignAlytics/dimple/wiki/dimple.eventArgs
 https://github.com/mbostock/d3/wiki/Transitions
 http://stackoverflow.com/questions/24989128/why-is-my-d3-tip-not-working
+<<<<<<< HEAD
 https://www.udacity.com/course/viewer#!/c-ud507-nd/l-3069149263/m-3071138983
+=======
+https://www.udacity.com/course/viewer#!/c-ud507-nd/l-3069149263/m-3071138983
+>>>>>>> e0c7f49015ac1f6ec3ced1114b70263f21166f02

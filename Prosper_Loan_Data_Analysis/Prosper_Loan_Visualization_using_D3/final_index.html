@@ -13,6 +13,9 @@
     <body>
 		<div id="wrapper">
 		
+			<div id="legend">
+			</div>
+			
 			<div id="chart">
 			</div>
 		
@@ -23,10 +26,14 @@
 			<div id="about">
 				<!-- <h4>About</h4> -->
 				<p><strong>Is it better to invest in Prosper loans?</strong></p>
+
 				<p>This scatterplot plots the risk-return trade off of various popular mutual funds and types of Prosper loans. 
 				Start by clicking the term to see how differnt types of Prosper loan perfoms over various time frame.</p>
+				
 				<p>Risk of each type of Prosper loan is the average of its estimated loss, while return is the average of its estimated effective yield. 
-				For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period. For details regarding the methodology, please refer to the Readme file.</p>
+				For mutual funds, standard deviation is used to measure risk, and total return is used to measure return over each period. 
+				For details regarding the methodology, please refer to the Readme file.</p
+				
 				<p>The darker the color hue, the higher the Sharpe ratio of the portfolio.</p>
 			</div>
 			
@@ -61,27 +68,133 @@
 		
 		// Create canvas for first chart
 		var svg = d3.select("#chart")
-				.append("svg")
-					.attr("width", width + margin.left + margin.right)
-					.attr("height", height + margin.top + margin.bottom);
+			.append("svg")
+				.attr("width", width + margin.left + margin.right)
+				.attr("height", height + margin.top + margin.bottom);
+					
+		var legend_svg = d3.select("#legend")
+			.append("svg")
+				.attr("width", 200)
+				.attr("height", 120);
 					
 		svg.append('g')
 			.classed('chart', true)
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");;
 		
 		// Get the data for the first chart
+
  	    d3.csv("http://localhost:8888/My-1st-Project/Udacity_Course_Projects/Prosper_Loan_Data_Analysis/Prosper_Loan_Visualization_using_D3/prosperLoanData1.csv", function(data) {
 			
 			"use strict";
+			
+			var percent_format = d3.format(".2%");
+			var float_format = d3.format(".3g");
+			var count;
+			
+			// Define color scale
+			var prosper_threshold = d3.scale.threshold()
+				.domain([.11, .22, .33, .50])
+				.range(["#e0ecdf", "#b2cfaf", "#85b380", "#5c8f56", "#335030"]);
+				
+			var other_threshold = d3.scale.threshold()
+				.domain([.11, .22, .33, .50])
+				.range(["#f5d6d6", "#e69898", "#dc6f6f", "#d24646", "#7b1e1e"]);
+
+			// A position encoding for the key only
+			var legend_scale = d3.scale.linear()
+				.domain([0, 1])
+				.range([0, 240]);
+			
+			// Creating propser legend
+			var prosper_legend = legend_svg.append("g")
+				.attr("class", "prosper_key")
+				.attr("transform", "translate(0,25)");
+
+			prosper_legend.selectAll("g")
+				.data(prosper_threshold.range().map(function(color) { // Fix the minimum and maximum of threshold scale
+					var d = prosper_threshold.invertExtent(color);
+					if (d[0] == null) d[0] = legend_scale.domain()[0];
+					if (d[1] == null) d[1] = legend_scale.domain()[1];
+					return d;
+				}))
+			.enter().append("g")
+				.attr("id", function(d, i) {
+					if (i == 0) { return "prosper_first";};
+					if (i == 4) { return "prosper_last";};
+				})
+				.append("rect")
+				.attr("height", 8)
+				.attr("x", function(d) { return legend_scale(d[0]); })
+				.attr("width", function(d) { return legend_scale(d[1]) - legend_scale(d[0]); })
+				.style("fill", function(d) { return prosper_threshold(d[0]); });
+				
+			prosper_legend.append("text")
+				.attr("class", "legend_caption")
+				.attr("y", -6)
+				.text("Prosper loan Sharpe ratio");
+				
+			d3.select("#prosper_first").append("text")
+				.attr("class", "legend_value")
+				.attr("y", 20)
+				.text("Low");
+			
+			d3.select("#prosper_last").append("text")
+				.attr("class", "legend_value")
+				.attr("y", 20)
+				.attr("x", 175)
+				.text("High");
+			
+			// Creaing other portfolio legend
+			var other_legend = legend_svg.append("g")
+				.attr("class", "other_key")
+				.attr("transform", "translate(0,80)");
+
+			other_legend.selectAll("g")
+				.data(other_threshold.range().map(function(color) {
+					var d = other_threshold.invertExtent(color);
+					if (d[0] == null) d[0] = legend_scale.domain()[0];
+					if (d[1] == null) d[1] = legend_scale.domain()[1];
+					return d;
+				}))
+			.enter().append("g")
+				.attr("id", function(d, i) {
+					if (i == 0) { return "other_first";};
+					if (i == 4) { return "other_last";};
+				})
+				.append("rect")
+				.attr("height", 8)
+				.attr("x", function(d) { return legend_scale(d[0]); })
+				.attr("width", function(d) { return legend_scale(d[1]) - legend_scale(d[0]); })
+				.style("fill", function(d) { return other_threshold(d[0]); });
+				
+			other_legend.append("text")
+				.attr("class", "legend_caption")
+				.attr("y", -6)
+				.text("Other portfolio Sharpe ratio");
+				
+			d3.select("#other_first").append("text")
+				.attr("class", "legend_value")
+				.attr("y", 20)
+				.text("Low");
+			
+			d3.select("#other_last").append("text")
+				.attr("class", "legend_value")
+				.attr("y", 20)
+				.attr("x", 175)
+				.text("High");
+			
 			
 			var tip = d3.tip()
 				.attr('class', 'd3-tip')
 				.offset([-10, 0])
 				.html(function(d, i) {
 					tip_sharpe = "Sharpe " + feature;
-					return "<p><strong>Risk:</strong> <span style='color:red'>" + d[xfeature] + "</span></p>" +
-						   "<p><strong>Return:</strong> <span style='color:green'>" + d[yfeature] + "</span></p>" +
-						   "<p><strong>Sharpe:</strong> <span style='color:yellow'>" + d[tip_sharpe] + "</span></p>";
+					return "<p><strong>Risk:</strong> <span style='color:red'>" + 
+						percent_format(d[xfeature]) + "</span></p>" +
+						"<p><strong>Return:</strong> <span style='color:green'>" + 
+						percent_format(d[yfeature]) + "</span></p>" +
+						"<p><strong>Sharpe:</strong> <span style='color:yellow'>" + 
+						float_format(d[tip_sharpe]) + "</span></p>";
 				});
 		
 			svg.call(tip)
@@ -128,8 +241,8 @@
 				.attr('id', 'xAxis')
 				.call(xAxis)
 				.append("text")
-				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
-				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")  // centre below axis
+				.attr("text-anchor", "middle")
+				.attr("transform", "translate(" + (width/2) + "," + (margin.bottom * 0.75) + ")")
 				.text("Total risk as a percentage of possible loss of initial investment");
 
 			d3.select('svg g.chart')
@@ -138,12 +251,12 @@
 				.attr("transform", "translate(0,0)") 
 				.call(yAxis)
 				.append("text")
-				.attr("text-anchor", "middle")  // this makes it easy to centre the text as the transform is applied to the anchor
-				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+				.attr("text-anchor", "middle")
+				.attr("transform", "translate(" + (0-(margin.left * 0.75)) + "," +(height/2) + ")rotate(-90)")
 				.text("Total return as a percentage gain of initial investment");
 		
 			// Build menus
-		    d3.select('#feature-options-menu')
+			d3.select('#feature-options-menu')
 				.selectAll('li')
 				.data(feature_options)
 				.enter()
@@ -163,14 +276,14 @@
 			
 			// Define color scale for Prosper portfolio and other portfolios
 			var prosper_pointColour = d3.scale.linear()
-										.domain([0, 6])
-										.interpolate(d3.interpolateHcl)
-										.range([d3.rgb("#ccffcc"), d3.rgb("#003300")]);
+				.domain([0, 6])
+				.interpolate(d3.interpolateHcl)
+				.range([d3.rgb("#ccffcc"), d3.rgb("#003300")]);
 										
 			var other_pointColour = d3.scale.linear()
-										.domain([0, 1])
-										.interpolate(d3.interpolateHcl)
-										.range([d3.rgb("#ffcccc"), d3.rgb("#4d0000")]);
+				.domain([0, 1])
+				.interpolate(d3.interpolateHcl)
+				.range([d3.rgb("#ffcccc"), d3.rgb("#4d0000")]);
 			
 			var circles = d3.select('svg g.chart')
 				.selectAll('circle')
@@ -276,7 +389,7 @@
 				.classed('selected', function(d) {
 					return d === feature;
 				});
-			}
+			};
 		});
 	</script>
     </body>
